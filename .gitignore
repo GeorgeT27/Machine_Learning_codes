@@ -1,0 +1,15 @@
+# secrets
+.env
+**/keys.json
+
+# model weights / large binaries
+*.bin
+*.pt
+*.ckpt
+*.safetensors
+
+# common caches
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
