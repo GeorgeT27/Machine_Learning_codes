@@ -7,7 +7,7 @@ set -euo pipefail
 DATA_ROOT=${1:-data}
 MODEL=${2:-bert-base-uncased}
 OUTPUT_DIR=${3:-experiments}
-EPOCH=${4:-2}
+EPOCH=${4:-4}
 LR=${5:-2e-5}
 BS=${6:-32}
 MAX_LENGTH=${7:-512}

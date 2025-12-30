@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 def load_data(args,splits):
     df=pd.read_csv(f'{args.data_root}/{splits}.csv')
     texts=df['text'].values.tolist()
-    labels=df['label'].values.tolist()
+    labels=df['target'].values.tolist()
     return texts,labels
 
 class TextDataset(Dataset):
@@ -21,7 +21,6 @@ class TextDataset(Dataset):
         source=self.tokeniser.batch_encode_plus(
             [text],
             max_length=self.max_length,
-            pad_to_max_length=True,
             padding='max_length',
             truncation=True,
             return_tensors='pt'
@@ -29,7 +28,13 @@ class TextDataset(Dataset):
 
         source_ids=source['input_ids'].squeeze(0)  # remove batch dimension
         source_mask=source['attention_mask'].squeeze(0)
-        data_sample={'source_ids':source_ids,'source_mask':source_mask}
+        data_sample={
+            'input_ids':source_ids,
+            'attention_mask':source_mask
+        }
+        # Include token type IDs if the tokenizer returns them (e.g., BERT-style models)
+        if 'token_type_ids' in source:
+            data_sample['token_type_ids']=source['token_type_ids'].squeeze(0)
         if not self.is_test:
             label=self.labels[index]
             target_ids=torch.tensor(label,dtype=torch.long)
