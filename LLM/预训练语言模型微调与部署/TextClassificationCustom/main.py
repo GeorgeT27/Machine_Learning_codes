@@ -4,6 +4,7 @@ import numpy as np
 from email import parser
 import json
 from utils_data import load_data,TextDataset
+from peft import loraconfig, get_peft_model
 from transformers import (
     AutoConfig,
     AutoTokenizer,
@@ -31,9 +32,23 @@ def main():
     print('====Input Arguments====')
     print(json.dumps(vars(args), indent=2, sort_keys=False))
     set_seed(args.seed)
+    
+    # Load Model and Tokenizer
     config=AutoConfig.from_pretrained(args.model)
     tokeniser=AutoTokenizer.from_pretrained(args.model)
-    model=BertForSequenceClassification.from_pretrained(args.model, config=config)    
+    model=BertForSequenceClassification.from_pretrained(args.model, config=config) 
+    # Add LoRA
+    peft_config=loraconfig(
+        r=8,
+        lora_alpha=16,
+        lora_dropout=0.05,
+        bias="none",
+        task_type="SEQ_CLS",
+        target_modules=['query','value']
+    )
+    model =get_peft_model(model,peft_config)
+    model.print_trainable_parameters()
+    # Prepare Datasets
     train_data=load_data(args,'train')
     train_dataset=TextDataset(train_data,tokeniser,args.max_length,is_test=False)
     eval_data=load_data(args,'eval')
