@@ -1,11 +1,10 @@
 import argparse
 import os
 import numpy as np
-from email import parser
 import json
 from utils_data import load_data,TextDataset
 from torch.utils.data import random_split
-from peft import loraconfig, get_peft_model
+from peft import LoraConfig, get_peft_model
 from transformers import (
     AutoConfig,
     AutoTokenizer,
@@ -39,9 +38,9 @@ def main():
     tokeniser=AutoTokenizer.from_pretrained(args.model)
     model=BertForSequenceClassification.from_pretrained(args.model, config=config) 
     # Add LoRA
-    peft_config=loraconfig(
-        r=8,
-        lora_alpha=16,
+    peft_config=LoraConfig(
+        r=16,
+        lora_alpha=32,
         lora_dropout=0.05,
         bias="none",
         task_type="SEQ_CLS",
@@ -50,11 +49,12 @@ def main():
     model =get_peft_model(model,peft_config)
     model.print_trainable_parameters()
     # Prepare Datasets
-    train_val_data=load_data(args,'train')
-    train_val_dataset=TextDataset(train_val_data,tokeniser,args.max_length,is_test=False)
+    train_texts, train_labels, _ = load_data(args,'train')
+    train_val_dataset=TextDataset((train_texts, train_labels),tokeniser,args.max_length,is_test=False)
     train_dataset, eval_dataset = random_split(train_val_dataset, [int(0.8*len(train_val_dataset)), len(train_val_dataset)-int(0.8*len(train_val_dataset))])
-    test_data=load_data(args,'test')
-    test_dataset=TextDataset(test_data,tokeniser,args.max_length,is_test=True)
+
+    test_texts, test_labels, test_ids = load_data(args,'test')
+    test_dataset=TextDataset((test_texts, test_labels),tokeniser,args.max_length,is_test=True)
     def compute_metrics(p):
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
         preds = np.argmax(preds, axis=1)
@@ -99,12 +99,12 @@ def main():
     if training_args.do_predict:
         predictions = trainer.predict(test_dataset, metric_key_prefix="predict").predictions
         predictions = np.argmax(predictions, axis=1)
-        output_predict_file = os.path.join(args.output_dir, "predict_results.txt")
+        output_predict_file = os.path.join(args.output_dir, "predict_results.csv")
         if trainer.is_world_process_zero():
             with open(output_predict_file, "w") as writer:
-                writer.write("index\tprediction\n")
-                for index, item in enumerate(predictions):
-                    writer.write(f"{index}\t{item}\n")
+                writer.write("index,prediction\n")
+                for src_index, item in zip(test_ids, predictions):
+                    writer.write(f"{src_index},{item}\n")
 
 if __name__ == "__main__":
     main()

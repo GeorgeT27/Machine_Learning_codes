@@ -1,11 +1,26 @@
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-def load_data(args,splits):
-    df=pd.read_csv(f'{args.data_root}/{splits}.csv')
-    texts=df['text'].values.tolist()
-    labels=df['target'].values.tolist()
-    return texts,labels
+
+
+def load_data(args, splits):
+    """Load a split and return texts, labels (or placeholders) and original row ids."""
+    df = pd.read_csv(f"{args.data_root}/{splits}.csv")
+    texts = df["text"].tolist()
+    # Some splits (e.g., test) may not have labels; keep a placeholder list for length alignment.
+    if "target" in df.columns:
+        labels = df["target"].tolist()
+    else:
+        labels = [None] * len(df)
+    # Preserve the source ordering via an explicit id/index column when present; otherwise fallback to row order.
+    if "index" in df.columns:
+        ids = df["index"].tolist()
+    elif "id" in df.columns:
+        ids = df["id"].tolist()
+    else:
+        ids = list(df.index)
+
+    return texts, labels, ids
 
 class TextDataset(Dataset):
     def __init__(self,data,tokeniser,max_length,is_test):
