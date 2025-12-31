@@ -13,3 +13,5 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .DS_Store
+
+LLM/预训练语言模型微调与部署/TextClassificationCustom/experiments
