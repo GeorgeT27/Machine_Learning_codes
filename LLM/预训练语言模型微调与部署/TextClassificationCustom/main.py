@@ -4,6 +4,7 @@ import numpy as np
 from email import parser
 import json
 from utils_data import load_data,TextDataset
+from torch.utils.data import random_split
 from peft import loraconfig, get_peft_model
 from transformers import (
     AutoConfig,
@@ -49,10 +50,9 @@ def main():
     model =get_peft_model(model,peft_config)
     model.print_trainable_parameters()
     # Prepare Datasets
-    train_data=load_data(args,'train')
-    train_dataset=TextDataset(train_data,tokeniser,args.max_length,is_test=False)
-    eval_data=load_data(args,'eval')
-    eval_dataset=TextDataset(eval_data,tokeniser,args.max_length,is_test=False)
+    train_val_data=load_data(args,'train')
+    train_val_dataset=TextDataset(train_val_data,tokeniser,args.max_length,is_test=False)
+    train_dataset, eval_dataset = random_split(train_val_dataset, [int(0.8*len(train_val_dataset)), len(train_val_dataset)-int(0.8*len(train_val_dataset))])
     test_data=load_data(args,'test')
     test_dataset=TextDataset(test_data,tokeniser,args.max_length,is_test=True)
     def compute_metrics(p):
@@ -60,7 +60,7 @@ def main():
         preds = np.argmax(preds, axis=1)
         correct = ((preds == p.label_ids).sum()).item()
         return {'accuracy': 1.0*correct/len(preds)}
-    
+    # Define Training Arguments and Trainer
     training_args = TrainingArguments(
             output_dir = args.output_dir,
             do_train=True,
